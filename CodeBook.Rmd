@@ -3,26 +3,61 @@ title: "CodeBook"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+# Getting and Cleaning Data Course Projectless 
+
+One of the most exciting areas in all of data science right now is wearable computing. Companies like Fitbit, Nike, and Jawbone Up are racing to develop the most advanced algorithms to attract new users. The data linked to from the course website represent data collected from the accelerometers from the Samsung Galaxy S smartphone. A full description is available at the site where the data was obtained:
+
+http://archive.ics.uci.edu/ml/datasets/Human+Activity+Recognition+Using+Smartphones
+
+The purpose of this project is to collect, work with, and clean the data set from the above source.  The goal is to prepare tidy data that can be used for later analysis. 
+
+I created the R script called run_analysis.R that does the following.   
+1. Merges the training and the test sets to create one data set.   
+2. Extracts only the measurements on the mean and standard deviation for each measurement.   
+3. Uses descriptive activity names to name the activities in the data set.   
+4. Appropriately labels the data set with descriptive variable names.   
+5. From the data set in step 4, creates a second, independent tidy data set with the average of each variable for each activity and each subject.   
+   https://github.com/mervynlau/datasciencecoursera/blob/master/tidy_data_avg.txt
+
+# R script
+The run_analysis.R script can be found here.
+https://github.com/mervynlau/datasciencecoursera/blob/master/run_analysis.R
+
+
+# Readme
+The README that explains the run_analysis.R script.       
+https://github.com/mervynlau/datasciencecoursera/blob/master/README.Rmd
+
+# The tidy data
+https://github.com/mervynlau/datasciencecoursera/blob/master/tidy_data.csv
+
+The resulting tidy data contains the following variables.
+```
+Observations: 339,867          
+Variables: 9          
+$ ID       <int> 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1...         
+$ subject  <int> 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1...         
+$ set      <fct> train, train, train, train, train, train, train, train, train, t...          
+$ activity <fct> STANDING, STANDING, STANDING, STANDING, STANDING, STANDING, STAN...         
+$ domain   <fct> f, f, f, f, f, f, f, f, f, f, f, f, f, t, t, t, t, t, t, t, t, t...         
+$ sensor   <fct> BodyAcc, BodyAcc, BodyAcc, BodyAccJerk, BodyAccJerk, BodyAccJerk...        
+$ axis     <fct> X, Y, Z, X, Y, Z, NA, NA, NA, NA, X, Y, Z, X, Y, Z, X, Y, Z, NA,...        
+$ mean     <dbl> -0.994783190, -0.982984100, -0.939268650, -0.992332450, -0.98716...       
+$ std      <dbl> -0.9954217, -0.9831330, -0.9061650, -0.9958207, -0.9909363, -0.9...       
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+# The description of the variable 
+```
+$ ID       <int> An unique identifier for each observation.     
+$ subject  <int> An identifier of the subject who carried out the experiment.    
+$ set      <fct> An identifier of training data and the test data.     
+$ activity <fct> The activity label.       
+$ domain   <fct> "t" for time domain; "f' for frequency domain.     
+$ sensor   <fct> Identify the sensors (accelerometer and gyroscope).       
+$ axis     <fct> Denote 3-axial signals in the X, Y and Z directions. NA denotes measurement without axial information.       
+$ mean     <dbl> The mean value of the measurement.           
+$ std      <dbl> The standard deviation of the measurement.         
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
