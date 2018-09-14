@@ -1,10 +1,12 @@
+# Getting and Cleaning Data Course Project
 setwd("../Getting and Cleaning Data Course Project")
+getwd()
 library(tidyverse)
 library(data.table)
 
 README <- read_lines("./UCI HAR Dataset/README.txt")
-features_info <- read_lines("./UCI HAR Dataset/features_info.txt")
 README
+features_info <- read_lines("./UCI HAR Dataset/features_info.txt")
 features_info
 
 # Its activity label. 
@@ -18,79 +20,70 @@ features <-
   read_table("./UCI HAR Dataset/features.txt", col_names = FALSE) 
 features
 
+# Training data set
 X_train <- 
   read_table("../Getting and Cleaning Data Course Project/UCI HAR Dataset/train/X_train.txt", col_names = FALSE) 
 colnames(X_train) <- as.vector(t(features[,1]))
-glimpse(X_train)
 
-filter(features, str_detect(X1, "mean()") | str_detect(X1, "std()"))
-
+# Extracts only the measurements on the mean and standard deviation for each measurement.
 X_train_mean_std <- select(X_train, contains("-mean()"), contains("-std()"))
 
 y_train <-
   read_table("./UCI HAR Dataset/train/y_train.txt", col_names = FALSE) 
 colnames(y_train) <- "label"
+# Uses descriptive activity names to name the activities in the data set
 y_train <- left_join(y_train, activity_labels, by = "label")
-glimpse(y_train)
 
-# An identifier of the subject who carried out the experiment.
 subject_train <- 
   read_table("./UCI HAR Dataset/train/subject_train.txt", col_names = FALSE)
 colnames(subject_train) <- "subject"
 subject_train <- mutate(subject_train, set = "train")
-glimpse(subject_train)
 
 train_data <- cbind(subject_train, y_train, X_train_mean_std) %>% tbl_df()
-glimpse(train_data)
 
-# A 561-feature vector with time and frequency domain variables.
+# Test data set
 X_test <- 
   read_table("./UCI HAR Dataset/test/X_test.txt", col_names = FALSE) 
 colnames(X_test) <- as.vector(t(features[,1]))
 
+# Extracts only the measurements on the mean and standard deviation for each measurement.
 X_test_mean_std <- select(X_test, contains("-mean()"), contains("-std()"))
 
 y_test <-
   read_table("./UCI HAR Dataset/test/y_test.txt", col_names = FALSE) 
 colnames(y_test) <- "label"
+# Uses descriptive activity names to name the activities in the data set
 y_test <- left_join(y_test, activity_labels, by = "label")
 
-# An identifier of the subject who carried out the experiment.
 subject_test <- 
   read_table("./UCI HAR Dataset/test/subject_test.txt", col_names = FALSE)
 colnames(subject_test) <- "subject"
 subject_test <- mutate(subject_test, set = "test")
 
 test_data <- cbind(subject_test, y_test, X_test_mean_std) %>% tbl_df()
-glimpse(test_data)
 
-# Combine train and test data sets
+# Merges the training and the test sets to create one data set
 full_data <- rbind(train_data, test_data)
-
-glimpse(full_data)
-full_data
 full_data <- tibble::rowid_to_column(full_data, "ID")
 
-# Reshaping data
-
+# Reshaping the data
 full_gather <- gather(full_data, key = "key", value = "value", `1 tBodyAcc-mean()-X`:`543 fBodyBodyGyroJerkMag-std()`) 
-glimpse(full_gather)
-full_gather
 full_separate <- separate(full_gather, key, into = c("num", "key"), sep = " ") %>% select(- num)
 full_separate <- separate(full_separate,  key, into = c("sensor","key","axis"), sep = "-")
-full_separate
 
 full_spread <- spread(full_separate, key, value)
-full_spread <- mutate(full_spread, set = as.factor(set), activity = as.factor(activity), axis = as.factor(axis), domain = as.factor(substring(sensor,1,1)),  sensor = substring(sensor, 2))
+full_spread <- mutate(full_spread, set = as.factor(set), activity = as.factor(activity), axis = as.factor(axis), domain = as.factor(substring(sensor,1,1)),  sensor = as.factor(substring(sensor, 2)))
 colnames(full_spread)[colnames(full_spread)=="mean()"] <- "mean"
 colnames(full_spread)[colnames(full_spread)=="std()"] <- "std"
 tidy_data <- select(full_spread, ID, subject, set, activity, domain, sensor, axis, mean, std)
 tidy_data
 summary(tidy_data)
 write_csv(tidy_data, "tidy_data.csv")
-
+# Step 5
 tidy_data_avg <- select(tidy_data, -ID) %>% group_by(subject, set, activity, domain, sensor, axis) %>% summarise(avg.mean = mean(mean), avg.std = mean(std))
 tidy_data_avg
+summary(tidy_data_avg)
 glimpse(tidy_data_avg)
-write_csv(tidy_data_avg, "tidy_data_avg.csv")
+
+#Export final tidy data
 write.table(tidy_data_avg, "tidy_data_avg.txt", row.names = FALSE)

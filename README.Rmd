@@ -3,26 +3,175 @@ title: "README"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+This README document explains the run_analysis.R file.
+
+# Set up the environment
+We start with setting the working directory and loading the necessary libraries.  
+```{r}
+setwd("../Getting and Cleaning Data Course Project")
+getwd()
+library(tidyverse)
+library(data.table)
 ```
 
-## R Markdown
+# Study the provided information about the data
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+## README
+```{r}
+README <- read_lines("./UCI HAR Dataset/README.txt")
+README
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+## features_info
+```{r}
+features_info <- read_lines("./UCI HAR Dataset/features_info.txt")
+features_info
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## Import the activity_labels table and add column names
+```{r}
+activity_labels <-
+ read_table("./UCI HAR Dataset/activity_labels.txt", col_names = FALSE)
+colnames(activity_labels) <- c("label", "activity")
+activity_labels
+```
+
+## Import the feature table
+```{r}
+features <-
+  read_table("./UCI HAR Dataset/features.txt", col_names = FALSE) 
+features
+```
+
+# Working on the Training data set
+We import the X_train data and add the column names from the features table.
+```{r}
+X_train <- 
+  read_table("../Getting and Cleaning Data Course Project/UCI HAR Dataset/train/X_train.txt", col_names = FALSE) 
+colnames(X_train) <- as.vector(t(features[,1]))
+glimpse(X_train)
+```
+
+Extracts only the measurements on the mean and standard deviation for each measurement from the X_train table to create a new table object X_train_mean_std.
+```{r} 
+X_train_mean_std <- select(X_train, contains("-mean()"), contains("-std()"))
+glimpse(X_train_mean_std)
+```
+
+# Import the y_trian data and join the descriptive activity names to name the activities in the data set
+
+```{r}
+y_train <-
+  read_table("./UCI HAR Dataset/train/y_train.txt", col_names = FALSE) 
+colnames(y_train) <- "label"
+y_train <- left_join(y_train, activity_labels, by = "label")
+glimpse(y_train)
+```
+
+# Import the subject_train data
+We give a column name "subject" to the imported data and add a new column "set" to identify the subjects are from the training data set.
+```{r}
+subject_train <- 
+  read_table("./UCI HAR Dataset/train/subject_train.txt", col_names = FALSE)
+colnames(subject_train) <- "subject"
+subject_train <- mutate(subject_train, set = "train")
+glimpse(subject_train)
+```
+
+# Column bind the three data objects to create a new table object "train_data".
+It contains all the required data elements for the Training data set.
+```{r}
+train_data <- cbind(subject_train, y_train, X_train_mean_std) %>% tbl_df()
+glimpse(train_data)
+```
+
+# Testing data set
+We repeat the same procedures from the Training data set to the Testing data set.  It gives us the required data elements for the Testing data set.
+```{r}
+X_test <- 
+  read_table("./UCI HAR Dataset/test/X_test.txt", col_names = FALSE) 
+colnames(X_test) <- as.vector(t(features[,1]))
+
+# Extracts only the measurements on the mean and standard deviation for each measurement.
+X_test_mean_std <- select(X_test, contains("-mean()"), contains("-std()"))
+
+y_test <-
+  read_table("./UCI HAR Dataset/test/y_test.txt", col_names = FALSE) 
+colnames(y_test) <- "label"
+# Uses descriptive activity names to name the activities in the data set
+y_test <- left_join(y_test, activity_labels, by = "label")
+
+subject_test <- 
+  read_table("./UCI HAR Dataset/test/subject_test.txt", col_names = FALSE)
+colnames(subject_test) <- "subject"
+subject_test <- mutate(subject_test, set = "test")
+
+test_data <- cbind(subject_test, y_test, X_test_mean_std) %>% tbl_df()
+glimpse(test_data)
+```
+
+# Merges the training and the test sets to create one data set
+We then row bind the train_data and test_test together to create the full_data objects.  It contains all required data elements for both Training and Testing data sets.  A new column "ID" is added as an unique identifier for each row records.  
+```{r}
+full_data <- rbind(train_data, test_data)
+full_data <- tibble::rowid_to_column(full_data, "ID")
+distinct(full_data, set)
+glimpse(full_data)
+```
+
+# Reshaping the data
+## Gather the mean and standard deviation from columns to rows
+Our next step is to reshape the data.  By using the gather function, we create a key from the column names of the full_data and using the mean and standard deviation values as the value column.  
+```{r}
+full_gather <- gather(full_data, key = "key", value = "value", `1 tBodyAcc-mean()-X`:`543 fBodyBodyGyroJerkMag-std()`) 
+glimpse(full_gather)
+```
+
+## Separate the key column
+The key column contains four separate information.  They are domain, sensor, measurement type and axis.  We have to separate out the information one by one.
+
+We first remove the first number segment from the key such that "1 tBodyAcc-mean()-X" becomes "tBodyAcc-mean()-X".
+```{r}
+full_separate <- separate(full_gather, key, into = c("num", "key"), sep = " ") %>% select(- num)
+glimpse(full_separate)
+```
+
+We then further separate sensor, key and axis.  After that, the key column only contains either "mean()" or "std()".  For those measurement without axis, it will be filled with NA.
+```{r}
+full_separate <- separate(full_separate,  key, into = c("sensor","key","axis"), sep = "-")
+glimpse(full_separate)
+```
+
+## Spread the mean and standard from rows to columns
+The next procedure is to use the spread function to the move the mean and standard deviation data from rows to columns.  At the same time, we further separate the domain identifier from the sensor column. We also rename the "mean()"" and "std()" to a proper format.  
+```{r}
+full_spread <- spread(full_separate, key, value)
+full_spread <- mutate(full_spread, set = as.factor(set), activity = as.factor(activity), axis = as.factor(axis), domain = as.factor(substring(sensor,1,1)),  sensor = as.factor(substring(sensor, 2)))
+colnames(full_spread)[colnames(full_spread)=="mean()"] <- "mean"
+colnames(full_spread)[colnames(full_spread)=="std()"] <- "std"
+glimpse(full_spread)
+```
+
+# The tidy data set
+Finally, we reorder the columns to create the tidy_data object.  
+```{r}
+tidy_data <- select(full_spread, ID, subject, set, activity, domain, sensor, axis, mean, std)
+glimpse(tidy_data)
+summary(tidy_data)
+```
+
+# Independent tidy data set with the average of each variable for each activity and each subject.
+Based on the tidy data from last step, we group the data by subject, activity, domain, sensor and axis and the summarise the mean and std variable by their average value.
+```{r}
+tidy_data_avg <- select(tidy_data, -ID) %>% group_by(subject, set, activity, domain, sensor, axis) %>% summarise(avg.mean = mean(mean), avg.std = mean(std))
+tidy_data_avg
+```
+
+The summarised data is then export to a txt file.
+```{r}
+#Export final tidy data
+write.table(tidy_data_avg, "tidy_data_avg.txt", row.names = FALSE)
+read.table("tidy_data_avg.txt", header = TRUE) %>% head()
+```
+
+
